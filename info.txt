@@ -1,0 +1,40 @@
+Open Library Book Search Plugin for Flow Launcher
+
+Version: 1.0.0
+
+Description:
+Search for books on Open Library directly from Flow Launcher. Get instant access to book information including title, author, and cover images.
+
+Features:
+- Search Open Library database with the 'book' command
+- View book covers, titles, and authors
+- Open books directly on Open Library website
+- Automatic cover image caching and cleanup
+
+Usage:
+Type 'book' followed by the book name to search
+
+Examples:
+- book The Great Gatsby
+- book Harry Potter
+- book 1984
+
+Requirements:
+- Python 3.6+
+- Internet connection for API calls
+
+Installation:
+1. Download or clone this plugin
+2. Place in Flow Launcher's plugin directory
+3. Restart Flow Launcher
+4. Type 'book' to start searching
+
+Keyboard Shortcuts:
+- Enter: Open selected book on Open Library
+
+Notes:
+- Book covers are cached locally and automatically cleaned up after 3 days
+- Search results limited to top 5 matches
+- Requires active internet connection
+
+Author: andreimidari

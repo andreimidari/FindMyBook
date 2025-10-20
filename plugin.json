@@ -1,0 +1,13 @@
+{
+  "ID": "FindMyBook",
+  "ActionKeyword": "book",
+  "Name": "FindMyBook",
+  "Description": "Search for books on Open Library and open them directly",
+  "Author": "andreimidari",
+  "Version": "1.0.0",
+  "Language": "python",
+  "Repository": "https://github.com/yourusername/flow-launcher-openlibrary-plugin",
+  "IcoPath": "app.png",
+  "ExecuteFileName": "main.py"
+}
+
