@@ -1,0 +1,13 @@
+__pycache__/
+*$py.class
+*.so
+
+img_cache/
+debug.log
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.vim/
