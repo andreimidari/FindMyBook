@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-from io import BytesIO
 
 plugindir = Path.absolute(Path(__file__).parent)
 lib_path = plugindir / 'lib'
@@ -9,27 +8,23 @@ if str(lib_path) not in sys.path:
 
 import json
 import os
+import time
 import urllib.parse
 import urllib.request
-import subprocess
-import time
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 if sys.stdout.encoding != 'utf-8':
     sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
+COVERS_BASE_URL = "https://covers.openlibrary.org/b"
+COVER_SIZE = "M"
+
 class OpenLibraryPlugin:
     def __init__(self):
         self.plugin_dir = os.path.dirname(os.path.abspath(__file__))
-        self.cache_dir = os.path.join(self.plugin_dir, "img_cache")
         self.app_icon = os.path.join(self.plugin_dir, "app.png")
-        self.default_book_icon = os.path.join(self.plugin_dir, "book.png")
+        book_icon = os.path.join(self.plugin_dir, "book.png")
+        self.default_book_icon = book_icon if os.path.exists(book_icon) else self.app_icon
         self.log_file = os.path.join(self.plugin_dir, "debug.log")
-        
-        if not os.path.exists(self.cache_dir):
-            os.makedirs(self.cache_dir)
-        threading.Thread(target=self.cleanup_image_cache, daemon=True).start()
 
     def log_debug(self, message):
         """Log debug messages to file"""
@@ -40,145 +35,80 @@ class OpenLibraryPlugin:
         except:
             pass
 
-    def cleanup_image_cache(self):
-        if not os.path.isdir(self.cache_dir):
-            return
-        now = time.time()
-        age_limit_seconds = 3 * 24 * 60 * 60
-        try:
-            for filename in os.listdir(self.cache_dir):
-                file_path = os.path.join(self.cache_dir, filename)
-                if os.path.isfile(file_path):
-                    file_mod_time = os.path.getmtime(file_path)
-                    if (now - file_mod_time) > age_limit_seconds:
-                        os.remove(file_path)
-        except Exception:
-            pass
-
     def search_openlibrary_api(self, search_term):
         try:
             search_term = search_term.strip()
             if not search_term:
                 return []
-            
+
             encoded_term = urllib.parse.quote(search_term)
             api_url = f"https://openlibrary.org/search.json?title={encoded_term}&limit=10"
-            
+
             self.log_debug(f"Searching for: {search_term}")
-            
+
             req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=8) as response:
                 data = json.loads(response.read().decode('utf-8'))
-            
+
             books = []
-            if 'docs' in data:
-                for doc in data['docs']:
-                    # Try multiple cover ID fields
-                    cover_id = doc.get('cover_i') or doc.get('cover_edition_key')
-                    
-                    # If still no cover, try to get it from ISBN
-                    if not cover_id and doc.get('isbn'):
-                        isbn_list = doc.get('isbn', [])
-                        if isbn_list:
-                            cover_id = f"isbn_{isbn_list[0]}"
-                    
-                    book_info = {
-                        'key': doc.get('key'),
-                        'title': doc.get('title', 'Unknown Title'),
-                        'author_name': doc.get('author_name', ['Unknown Author'])[0] if doc.get('author_name') else 'Unknown Author',
-                        'cover_id': cover_id,
-                        'first_publish_year': doc.get('first_publish_year'),
-                        'isbn': doc.get('isbn', [None])[0] if doc.get('isbn') else None
-                    }
-                    
-                    self.log_debug(f"Book: {book_info['title']}, Cover ID: {cover_id}")
-                    books.append(book_info)
-            
+            for doc in data.get('docs', []):
+                isbn_list = doc.get('isbn') or []
+                book_info = {
+                    'key': doc.get('key'),
+                    'title': doc.get('title', 'Unknown Title'),
+                    'author_name': doc.get('author_name', ['Unknown Author'])[0] if doc.get('author_name') else 'Unknown Author',
+                    'cover_id': doc.get('cover_i'),
+                    'cover_edition_key': doc.get('cover_edition_key'),
+                    'first_publish_year': doc.get('first_publish_year'),
+                    'isbn': isbn_list[0] if isbn_list else None,
+                }
+
+                self.log_debug(f"Book: {book_info['title']}, Cover ID: {book_info['cover_id']}")
+                books.append(book_info)
+
             return books[:5]  # Return only top 5
         except Exception as e:
             self.log_debug(f"API Error: {str(e)}")
             return []
 
-    def download_cover(self, cover_id, save_path, isbn=None):
-        """Try multiple methods to download cover"""
-        urls_to_try = []
-        
-        # Method 1: Direct cover ID
-        if cover_id and not str(cover_id).startswith('isbn_'):
-            urls_to_try.append(f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg")
-            urls_to_try.append(f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg")
-        
-        # Method 2: ISBN
-        if isbn:
-            urls_to_try.append(f"https://covers.openlibrary.org/b/isbn/{isbn}-M.jpg")
-        
-        # Method 3: If cover_id is actually an ISBN
-        if cover_id and str(cover_id).startswith('isbn_'):
-            isbn_val = str(cover_id).replace('isbn_', '')
-            urls_to_try.append(f"https://covers.openlibrary.org/b/isbn/{isbn_val}-M.jpg")
-        
-        for url in urls_to_try:
-            try:
-                self.log_debug(f"Trying to download: {url}")
-                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req, timeout=5) as response:
-                    content = response.read()
-                    # Check if it's actually an image (not a placeholder)
-                    if len(content) > 1000:  # Real covers are usually > 1KB
-                        with open(save_path, 'wb') as out_file:
-                            out_file.write(content)
-                        self.log_debug(f"Successfully downloaded cover to {save_path}")
-                        return True
-            except Exception as e:
-                self.log_debug(f"Failed to download from {url}: {str(e)}")
-                continue
-        
-        return False
+    def get_cover_url(self, cover_id=None, cover_edition_key=None, isbn=None):
+        """Build the remote cover URL for the best available identifier.
 
-    def get_cover_image(self, cover_id, isbn=None):
-        if not cover_id and not isbn:
+        Flow Launcher loads HTTP(S) IcoPath values itself, so the plugin no
+        longer downloads and caches cover images.
+        """
+        if cover_id:
+            cover_type, identifier = "id", cover_id
+        elif cover_edition_key:
+            cover_type, identifier = "olid", cover_edition_key
+        elif isbn:
+            cover_type, identifier = "isbn", isbn
+        else:
             return self.default_book_icon
-        
-        # Create a unique cache filename
-        cache_name = str(cover_id or isbn).replace('/', '_')
-        cached_cover_path = os.path.join(self.cache_dir, f"{cache_name}.jpg")
-        
-        # Return cached cover if it exists and is valid
-        if os.path.exists(cached_cover_path):
-            try:
-                # Check if file is not empty
-                if os.path.getsize(cached_cover_path) > 1000:
-                    return cached_cover_path
-                else:
-                    # Remove invalid cache file
-                    os.remove(cached_cover_path)
-            except:
-                pass
-        
-        # Try to download the cover
-        if self.download_cover(cover_id, cached_cover_path, isbn):
-            return cached_cover_path
-        
-        return self.default_book_icon
+
+        identifier = urllib.parse.quote(str(identifier), safe="")
+        return f"{COVERS_BASE_URL}/{cover_type}/{identifier}-{COVER_SIZE}.jpg?default=false"
 
     def process_book_data(self, book_data):
         title = book_data.get('title', 'Unknown Title')
         author = book_data.get('author_name', 'Unknown Author')
-        cover_id = book_data.get('cover_id')
-        isbn = book_data.get('isbn')
         book_key = book_data.get('key')
         year = book_data.get('first_publish_year', '')
-        
-        cover_path = self.get_cover_image(cover_id, isbn)
-        
+
+        cover_url = self.get_cover_url(
+            cover_id=book_data.get('cover_id'),
+            cover_edition_key=book_data.get('cover_edition_key'),
+            isbn=book_data.get('isbn'),
+        )
+
         subtitle = f"by {author}"
         if year:
             subtitle += f" ({year})"
-        
+
         return {
             "Title": title,
             "SubTitle": subtitle,
-            "IcoPath": cover_path,
+            "IcoPath": cover_url,
             "JsonRPCAction": {"method": "open_openlibrary_page", "parameters": [book_key]}
         }
 
@@ -195,7 +125,6 @@ class OpenLibraryPlugin:
         api_results = self.search_openlibrary_api(search_term)
         
         if api_results:
-            # Process books sequentially to ensure proper cover download
             for book_data in api_results:
                 try:
                     result = self.process_book_data(book_data)

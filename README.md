@@ -70,8 +70,7 @@ You can change the action keyword in **Flow Launcher → Settings → Plugins �
 - Search Open Library by title as you type.
 - See covers, authors, and first publication years.
 - Open the selected book's Open Library page with one click.
-- Cache covers locally for faster repeat searches.
-- Clean up cached covers automatically after 3 days.
+- Covers load directly from Open Library, so results appear without waiting for downloads.
 
 ## Requirements
 
@@ -92,10 +91,11 @@ You can change the action keyword in **Flow Launcher → Settings → Plugins �
 
 **Covers are missing.**
 - Open Library does not have a cover for every book.
-- Covers are cached in `img_cache/` and cleaned up after 3 days.
+- If a book has no cover, the plugin shows its own icon instead.
+- Cover images are fetched by Flow Launcher from Open Library, so they need an internet connection.
 
 **The first search is slow.**
-- The plugin downloads covers on the first run. Repeat searches use the local cache.
+- Results appear as soon as Open Library responds. Cover images load separately and may take a moment the first time Flow Launcher displays them.
 
 ## Development
 
@@ -114,7 +114,6 @@ main.py                       Plugin entry point and Open Library client
 plugin.json                   Flow Launcher plugin manifest
 app.png                       Plugin icon
 Lib/                          Bundled Python dependencies
-img_cache/                    Runtime cover cache (git-ignored)
 .github/workflows/main.yml    Bundles dependencies on requirements changes
 .github/workflows/release.yml Builds and publishes the release zip
 plugin-store/                 Staged Flow Launcher plugin-store manifest entry
