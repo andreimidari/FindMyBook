@@ -1,48 +1,135 @@
 # FindMyBook
-Search for books on OpenLibrary directly from Flow Launcher.
 
-## 🚀 Usage
+Search for books on [Open Library](https://openlibrary.org/) directly from [Flow Launcher](https://www.flowlauncher.com/).
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+> **Status:** manual installation is available now. The Flow Launcher plugin-store listing is pending approval.
+
+## Installation
+
+### Flow Launcher plugin store
+
+Once the store listing is approved, install it from **Settings → Plugin Store**, or run:
+
+```
+pm install FindMyBook
+```
+
+### Manual installation
+
+1. Download `FindMyBook.zip` from the [latest release](https://github.com/andreimidari/FindMyBook/releases/latest).
+2. Extract it into a folder named `FindMyBook` inside your Flow Launcher plugins directory:
+
+   ```
+   %APPDATA%\FlowLauncher\Plugins\FindMyBook
+   ```
+
+3. Restart Flow Launcher.
+4. Type `book` to start searching.
+
+You can also install it straight from the release URL:
+
+```
+pm install https://github.com/andreimidari/FindMyBook/releases/latest/download/FindMyBook.zip
+```
+
+The zip already contains the bundled Python dependencies in `Lib/`, so you do not need to run `pip install`.
+
+### From source
+
+```powershell
+git clone https://github.com/andreimidari/FindMyBook.git
+```
+
+Copy or move the cloned folder into `%APPDATA%\FlowLauncher\Plugins\FindMyBook`, then restart Flow Launcher.
+
+## Usage
 
 The plugin is triggered by the `book` keyword.
-
-1. Open Flow Launcher (usually with `Alt + Space`)
-2. Type `book` followed by the book title you want to search
-3. The query format is:
 
 ```
 book <book title>
 ```
 
-### Examples
+Examples:
 
-To search for "1984" by George Orwell:
 ```
 book 1984
-```
-
-To search for Harry Potter:
-```
 book harry potter
+book the great gatsby
 ```
 
-The plugin will show you up to 5 matching books with their covers, authors, and publication years.
+The plugin shows up to 5 matching books with their cover, author, and first publication year. Select a result to open its Open Library page in your browser.
 
-**Selecting a result** will open the book's page on OpenLibrary in your browser where you can:
-- Read the full description
-- Check availability
-- Find borrowing options
-- See reviews and ratings
+You can change the action keyword in **Flow Launcher → Settings → Plugins → FindMyBook**.
 
-## ✨ Features
+## Features
 
-- **Instant Search** - Get results as you type from millions of books
-- **Beautiful Covers** - See book covers directly in your search results
-- **Quick Access** - One click to open any book on OpenLibrary
-- **Author & Year Info** - See who wrote the book and when it was published
-- **Smart Matching** - Find books even with partial titles
+- Search Open Library by title as you type.
+- See covers, authors, and first publication years.
+- Open the selected book's Open Library page with one click.
+- Cache covers locally for faster repeat searches.
+- Clean up cached covers automatically after 3 days.
 
 ## Requirements
 
-- Flow Launcher v1.9+
-- Internet connection
+- Flow Launcher, any recent release.
+- An internet connection.
 
+## Troubleshooting
+
+**The plugin does not appear in Flow Launcher.**
+- Make sure `plugin.json` is directly inside `%APPDATA%\FlowLauncher\Plugins\FindMyBook\`.
+- Restart Flow Launcher.
+- Check Flow Launcher's log and the plugin's `debug.log` for errors.
+
+**No results are returned.**
+- Check your internet connection.
+- Try a shorter or more general title.
+- Open Library may not have a matching work; try searching on [openlibrary.org](https://openlibrary.org/) directly.
+
+**Covers are missing.**
+- Open Library does not have a cover for every book.
+- Covers are cached in `img_cache/` and cleaned up after 3 days.
+
+**The first search is slow.**
+- The plugin downloads covers on the first run. Repeat searches use the local cache.
+
+## Development
+
+Run the plugin manually:
+
+```powershell
+python main.py '{"method": "query", "parameters": ["1984"]}'
+```
+
+The plugin reads the JSON-RPC request from stdin or from `sys.argv[1]` and prints a JSON response to stdout.
+
+Project layout:
+
+```
+main.py                       Plugin entry point and Open Library client
+plugin.json                   Flow Launcher plugin manifest
+app.png                       Plugin icon
+Lib/                          Bundled Python dependencies
+img_cache/                    Runtime cover cache (git-ignored)
+.github/workflows/main.yml    Bundles dependencies on requirements changes
+.github/workflows/release.yml Builds and publishes the release zip
+plugin-store/                 Staged Flow Launcher plugin-store manifest entry
+RELEASING.md                  Release and store-submission checklist
+LICENSE                       MIT license
+```
+
+## Releasing
+
+See [RELEASING.md](RELEASING.md) for the release and plugin-store submission checklist.
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Attribution
+
+Book data and covers are provided by [Open Library](https://openlibrary.org/), a project of the [Internet Archive](https://archive.org/). This plugin is not affiliated with Open Library or the Internet Archive.

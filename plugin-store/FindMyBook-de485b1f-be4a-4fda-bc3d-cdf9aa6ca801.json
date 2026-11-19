@@ -1,0 +1,12 @@
+{
+  "ID": "de485b1f-be4a-4fda-bc3d-cdf9aa6ca801",
+  "Name": "FindMyBook",
+  "Description": "Search for books on Open Library and open them directly",
+  "Author": "andreimidari",
+  "Version": "1.0.0",
+  "Language": "python",
+  "Website": "https://github.com/andreimidari/FindMyBook",
+  "UrlDownload": "https://github.com/andreimidari/FindMyBook/releases/download/v1.0.0/FindMyBook.zip",
+  "UrlSourceCode": "https://github.com/andreimidari/FindMyBook/tree/main",
+  "IcoPath": "https://cdn.jsdelivr.net/gh/andreimidari/FindMyBook@main/app.png"
+}
