@@ -18,6 +18,21 @@ if sys.stdout.encoding != 'utf-8':
 COVERS_BASE_URL = "https://covers.openlibrary.org/b"
 COVER_SIZE = "M"
 
+SEARCH_URL = "https://openlibrary.org/search.json"
+RESULT_LIMIT = 5
+SEARCH_FIELDS = ",".join([
+    "key",
+    "title",
+    "author_name",
+    "cover_i",
+    "cover_edition_key",
+    "first_publish_year",
+    "isbn",
+])
+
+DEFAULT_REQUEST = '{"method": "query", "parameters": [""]}'
+
+
 class OpenLibraryPlugin:
     def __init__(self):
         self.plugin_dir = os.path.dirname(os.path.abspath(__file__))
@@ -41,8 +56,12 @@ class OpenLibraryPlugin:
             if not search_term:
                 return []
 
-            encoded_term = urllib.parse.quote(search_term)
-            api_url = f"https://openlibrary.org/search.json?title={encoded_term}&limit=10"
+            params = urllib.parse.urlencode({
+                "title": search_term,
+                "limit": RESULT_LIMIT,
+                "fields": SEARCH_FIELDS,
+            })
+            api_url = f"{SEARCH_URL}?{params}"
 
             self.log_debug(f"Searching for: {search_term}")
 
@@ -66,7 +85,7 @@ class OpenLibraryPlugin:
                 self.log_debug(f"Book: {book_info['title']}, Cover ID: {book_info['cover_id']}")
                 books.append(book_info)
 
-            return books[:5]  # Return only top 5
+            return books[:RESULT_LIMIT]
         except Exception as e:
             self.log_debug(f"API Error: {str(e)}")
             return []
@@ -171,12 +190,25 @@ class OpenLibraryPlugin:
             print(json.dumps(fallback, ensure_ascii=True))
             sys.stdout.flush()
 
+
+def read_request():
+    """Read the JSON-RPC request, preferring the argument Flow passes.
+
+    Flow Launcher sends the request as sys.argv[1]. Reading stdin first can
+    block forever when stdin is an open pipe, so only fall back to it when no
+    argument was supplied.
+    """
+    if len(sys.argv) > 1 and sys.argv[1].strip():
+        return sys.argv[1]
+    if sys.stdin and not sys.stdin.isatty():
+        return sys.stdin.read()
+    return DEFAULT_REQUEST
+
+
 def main():
     plugin = OpenLibraryPlugin()
     try:
-        input_data = sys.stdin.read() if sys.stdin and not sys.stdin.isatty() else (
-            sys.argv[1] if len(sys.argv) > 1 else '{"method": "query", "parameters": [""]}'
-        )
+        input_data = read_request()
         request = json.loads(input_data.strip() or '{}')
         method = request.get("method", "query")
         parameters = request.get("parameters", [""])
@@ -199,6 +231,7 @@ def main():
                 "IcoPath": plugin.app_icon
             }]
         })
+
 
 if __name__ == "__main__":
     main()

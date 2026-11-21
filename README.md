@@ -105,7 +105,7 @@ Run the plugin manually:
 python main.py '{"method": "query", "parameters": ["1984"]}'
 ```
 
-The plugin reads the JSON-RPC request from stdin or from `sys.argv[1]` and prints a JSON response to stdout.
+The plugin reads the JSON-RPC request from `sys.argv[1]` or, as a fallback, from stdin, and prints a JSON response to stdout.
 
 Project layout:
 
